@@ -26,12 +26,12 @@ DICT_SIZE = 400
 MAX_LENGTH = 50
 IGNORE_KEYS_IN_GOAL = ['eod', 'topic', 'messageLen', 'message']
 
-fin = file('utils/mapping.pair')
+fin = open('utils/mapping.pair', 'r')
 replacements = []
 for line in fin.readlines():
     tok_from, tok_to = line.replace('\n', '').split('\t')
     replacements.append((' ' + tok_from + ' ', ' ' + tok_to + ' '))
-
+fin.close()
 
 def is_ascii(s):
     return all(ord(c) < 128 for c in s)
@@ -306,7 +306,7 @@ def get_dial(dialogue):
 
 def loadData():
     data_url = "data/multi-woz/data.json"
-    dataset_url = "https://www.repository.cam.ac.uk/bitstream/handle/1810/280608/MULTIWOZ2.zip?sequence=3&isAllowed=y"
+    dataset_url = "https://www.repository.cam.ac.uk/bitstream/handle/1810/294507/MULTIWOZ2.1.zip?sequence=1&isAllowed=y"
     if not os.path.exists("data"):
         os.makedirs("data")
         os.makedirs("data/multi-woz")
@@ -317,15 +317,15 @@ def loadData():
         zip_ref = ZipFile(BytesIO(resp.read()))
         zip_ref.extractall("data/multi-woz")
         zip_ref.close()
-        shutil.copy('data/multi-woz/MULTIWOZ2 2/data.json', 'data/multi-woz/')
-        shutil.copy('data/multi-woz/MULTIWOZ2 2/valListFile.json', 'data/multi-woz/')
-        shutil.copy('data/multi-woz/MULTIWOZ2 2/testListFile.json', 'data/multi-woz/')
-        shutil.copy('data/multi-woz/MULTIWOZ2 2/dialogue_acts.json', 'data/multi-woz/')
+        shutil.copy('data/multi-woz/MULTIWOZ2.1/data.json', 'data/multi-woz/')
+        shutil.copy('data/multi-woz/MULTIWOZ2.1/valListFile.json', 'data/multi-woz/')
+        shutil.copy('data/multi-woz/MULTIWOZ2.1/testListFile.json', 'data/multi-woz/')
+        shutil.copy('data/multi-woz/MULTIWOZ2.1/dialogue_acts.json', 'data/multi-woz/')
 
 
 def getDomain(idx, log, domains, last_domain):
     if idx == 1:
-        active_domains = get_summary_bstate(log[idx]["metadata"], True) 
+        active_domains = get_summary_bstate(log[idx]["metadata"], True)
         crnt_doms = active_domains[0] if len(active_domains)!=0 else domains[0]
         return crnt_doms
     else:
@@ -353,15 +353,15 @@ def get_ds_diff(prev_d, crnt_d):
 def createData():
     # download the data
     loadData()
-    
+
     # create dictionary of delexicalied values that then we will search against, order matters here!
     # dic = delexicalize.prepareSlotValuesIndependent()
     delex_data = {}
 
-    fin1 = file('data/multi-woz/data.json')
+    fin1 = open('data/multi-woz/data.json', 'r')
     data = json.load(fin1)
 
-    fin2 = file('data/multi-woz/dialogue_acts.json')
+    fin2 = open('data/multi-woz/dialogue_acts.json', 'r')
     data2 = json.load(fin2)
 
     for didx, dialogue_name in enumerate(data):
@@ -392,7 +392,7 @@ def createData():
 
             # FIXING delexicalization:
             dialogue = fixDelex(dialogue_name, dialogue, data2, idx, idx_acts)
-        
+
         delex_data[dialogue_name] = dialogue
 
         # if didx > 10:
@@ -421,13 +421,13 @@ def divideData(data):
     """Given test and validation sets, divide
     the data for three different sets"""
     testListFile = []
-    fin = file('data/multi-woz/testListFile.json')
+    fin = open('data/multi-woz/testListFile.json', 'r')
     for line in fin:
         testListFile.append(line[:-1])
     fin.close()
 
     valListFile = []
-    fin = file('data/multi-woz/valListFile.json')
+    fin = open('data/multi-woz/valListFile.json', 'r')
     for line in fin:
         valListFile.append(line[:-1])
     fin.close()
@@ -437,13 +437,13 @@ def divideData(data):
     test_dials = []
     val_dials = []
     train_dials = []
-        
+
     # dictionaries
     word_freqs_usr = OrderedDict()
     word_freqs_sys = OrderedDict()
 
     count_train, count_val, count_test = 0, 0, 0
-    
+
     for dialogue_name in data:
         # print dialogue_name
         dial_item = data[dialogue_name]
@@ -466,13 +466,13 @@ def divideData(data):
                 turn_dialog['system_transcript'] = dial[turn_i-1]['sys'] if turn_i > 0 else ""
                 turn_dialog['turn_idx'] = turn_i
                 turn_dialog['belief_state'] = [{"slots": [s], "act": "inform"} for s in turn['bvs']]
-                turn_dialog['turn_label'] = [bs["slots"][0] for bs in turn_dialog['belief_state'] if bs not in last_bs] 
+                turn_dialog['turn_label'] = [bs["slots"][0] for bs in turn_dialog['belief_state'] if bs not in last_bs]
                 turn_dialog['transcript'] = turn['usr']
                 turn_dialog['system_acts'] = dial[turn_i-1]['sys_a'] if turn_i > 0 else []
                 turn_dialog['domain'] = turn['domain']
                 last_bs = turn_dialog['belief_state']
                 dialogue['dialogue'].append(turn_dialog)
-            
+
             if dialogue_name in testListFile:
                 test_dials.append(dialogue)
                 count_test += 1
